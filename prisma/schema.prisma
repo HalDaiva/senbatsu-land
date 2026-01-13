@@ -1,0 +1,264 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Group {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  since       DateTime     @db.Date
+  createdAt   DateTime     @default(now()) @db.Timestamptz
+  updatedAt   DateTime     @updatedAt @db.Timestamptz
+  shows       Show[]
+  videos      Video[]
+  generations Generation[]
+}
+
+model Generation {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(30)
+  groupId   Int
+  group     Group    @relation(fields: [groupId], references: [id])
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+  idols     Idol[]
+
+  @@index([groupId])
+}
+
+model Idol {
+  id           Int         @id @default(autoincrement())
+  name         String      @db.VarChar(50)
+  nativeName   String?     @db.VarChar(50)
+  generationId Int?
+  generation   Generation? @relation(fields: [generationId], references: [id])
+  createdAt    DateTime    @default(now()) @db.Timestamptz
+  updatedAt    DateTime    @updatedAt @db.Timestamptz
+  users        User[]
+
+  @@index([generationId])
+}
+
+model ShowType {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(20)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+  shows     Show[]
+}
+
+model VideoType {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(20)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+  videos    Video[]
+}
+
+model Host {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(24)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+  videos    Video[]
+}
+
+model Show {
+  id          Int      @id @default(autoincrement())
+  slug        String   @unique @db.VarChar(50)
+  title       String   @db.VarChar(50)
+  typeId      Int
+  type        ShowType @relation(fields: [typeId], references: [id])
+  startYear   Int?
+  endYear     Int?
+  description String?  @db.Text
+  coverUrl    String?  @db.Text
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+  seasons     Season[]
+  groups      Group[]
+
+  @@index([typeId])
+}
+
+model Season {
+  id        Int      @id @default(autoincrement())
+  show      Show     @relation(fields: [showId], references: [id])
+  showId    Int
+  sort      Int
+  name      String   @db.VarChar(24)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+  videos    Video[]
+
+  @@index([showId])
+  @@index([sort])
+}
+
+model Video {
+  id             Int        @id @default(autoincrement())
+  idFromHost     String     @db.VarChar(50)
+  hostId         Int
+  host           Host       @relation(fields: [hostId], references: [id])
+  slug           String     @unique @db.VarChar(50)
+  releaseDate    DateTime?  @db.Date
+  typeId         Int?
+  type           VideoType? @relation(fields: [typeId], references: [id])
+  groupId        Int?
+  group          Group?     @relation(fields: [groupId], references: [id])
+  seasonId       Int?
+  seasons        Season?    @relation(fields: [seasonId], references: [id])
+  episode        Int?
+  specialEpisode Int?
+  sort           Int?
+  clipShowSource String?    @db.VarChar(255)
+  title          String     @db.VarChar(255)
+  subtitler      String?    @db.VarChar(50)
+  aiSubs         Boolean    @default(false)
+  thumbnailUrl   String?    @db.Text
+  tags           String[]   @default([])
+  createdAt      DateTime   @default(now()) @db.Timestamptz
+  updatedAt      DateTime   @updatedAt @db.Timestamptz
+  comments       Comment[]
+  histories      History[]
+
+  @@index([hostId])
+  @@index([seasonId])
+  @@index([typeId])
+  @@index([groupId])
+  @@index([sort])
+}
+
+model Comment {
+  id        Int       @id @default(autoincrement())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  videoId   Int
+  video     Video     @relation(fields: [videoId], references: [id])
+  content   String    @db.Text
+  parentId  Int?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  createdAt DateTime  @default(now()) @db.Timestamptz
+  updatedAt DateTime  @updatedAt @db.Timestamptz
+  replies   Comment[] @relation("CommentReplies")
+
+  @@index([userId])
+  @@index([videoId])
+  @@index([parentId])
+}
+
+model User {
+  id            String          @id @default(cuid())
+  name          String?
+  username      String?         @unique
+  email         String?         @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role            @default(USER)
+  oshiId        Int?
+  oshi          Idol?           @relation(fields: [oshiId], references: [id])
+  createdAt     DateTime        @default(now()) @db.Timestamptz
+  updatedAt     DateTime        @updatedAt @db.Timestamptz
+  userSettings  UserSettings?
+  histories     History[]
+  comments      Comment[]
+  accounts      Account[]
+  sessions      Session[]
+  Authenticator Authenticator[]
+
+  @@index([oshiId])
+}
+
+model UserSettings {
+  id          Int      @id @default(autoincrement())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  displayOshi Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+}
+
+model History {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  videoId   Int
+  video     Video    @relation(fields: [videoId], references: [id])
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  @@index([userId])
+  @@index([videoId])
+}
+
+model Account {
+  id                       String  @id @default(cuid())
+  userId                   String  @unique
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String? @db.Text
+  access_token             String? @db.Text
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String? @db.Text
+  session_state            String?
+  refresh_token_expires_in Int?
+  user                     User?   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  @@unique([provider, providerAccountId], map: "account_provider_providerAccountId_key")
+  @@index([userId], map: "account_userId_idx")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id])
+  createdAt    DateTime @default(now()) @db.Timestamptz
+  updatedAt    DateTime @updatedAt @db.Timestamptz
+
+  @@index([userId], map: "session_userId_idx")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token], map: "verificationToken_identifier_token_key")
+}
+
+model Authenticator {
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, credentialID], map: "authenticator_pkey")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  USER
+}
