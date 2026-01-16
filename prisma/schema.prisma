@@ -14,14 +14,17 @@ datasource db {
 }
 
 model Group {
-  id          Int          @id @default(autoincrement())
-  name        String       @unique
-  since       DateTime     @db.Date
-  createdAt   DateTime     @default(now()) @db.Timestamptz
-  updatedAt   DateTime     @updatedAt @db.Timestamptz
-  shows       Show[]
-  videos      Video[]
-  generations Generation[]
+  id            Int          @id @default(autoincrement())
+  name          String       @unique
+  slug          String       @unique @db.VarChar(30)
+  nativeName    String?      @db.VarChar(30)
+  backgroundUrl String?      @db.Text
+  since         DateTime     @db.Date
+  createdAt     DateTime     @default(now()) @db.Timestamptz
+  updatedAt     DateTime     @updatedAt @db.Timestamptz
+  shows         Show[]
+  videos        Video[]
+  generations   Generation[]
 }
 
 model Generation {
@@ -50,19 +53,25 @@ model Idol {
 }
 
 model ShowType {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique @db.VarChar(20)
-  createdAt DateTime @default(now()) @db.Timestamptz
-  updatedAt DateTime @updatedAt @db.Timestamptz
-  shows     Show[]
+  id            Int      @id @default(autoincrement())
+  slug          String   @unique @db.VarChar(20)
+  name          String   @unique @db.VarChar(20)
+  japaneseName  String?  @db.VarChar(20)
+  backgroundUrl String?  @db.Text
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  updatedAt     DateTime @updatedAt @db.Timestamptz
+  shows         Show[]
 }
 
 model VideoType {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique @db.VarChar(20)
-  createdAt DateTime @default(now()) @db.Timestamptz
-  updatedAt DateTime @updatedAt @db.Timestamptz
-  videos    Video[]
+  id            Int      @id @default(autoincrement())
+  slug          String   @unique @db.VarChar(20)
+  name          String   @unique @db.VarChar(20)
+  japaneseName  String?  @db.VarChar(20)
+  backgroundUrl String?  @db.Text
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  updatedAt     DateTime @updatedAt @db.Timestamptz
+  videos        Video[]
 }
 
 model Host {
@@ -74,19 +83,19 @@ model Host {
 }
 
 model Show {
-  id          Int      @id @default(autoincrement())
-  slug        String   @unique @db.VarChar(50)
-  title       String   @db.VarChar(50)
+  id          Int       @id @default(autoincrement())
+  slug        String    @unique @db.VarChar(50)
+  title       String    @db.VarChar(50)
   typeId      Int
-  type        ShowType @relation(fields: [typeId], references: [id])
-  startYear   Int?
-  endYear     Int?
-  description String?  @db.Text
-  coverUrl    String?  @db.Text
-  createdAt   DateTime @default(now()) @db.Timestamptz
-  updatedAt   DateTime @updatedAt @db.Timestamptz
-  seasons     Season[]
+  type        ShowType  @relation(fields: [typeId], references: [id])
   groups      Group[]
+  startDate   DateTime? @db.Date
+  endDate     DateTime? @db.Date
+  description String?   @db.Text
+  coverUrl    String?   @db.Text
+  createdAt   DateTime  @default(now()) @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @db.Timestamptz
+  seasons     Season[]
 
   @@index([typeId])
 }
@@ -95,8 +104,9 @@ model Season {
   id        Int      @id @default(autoincrement())
   show      Show     @relation(fields: [showId], references: [id])
   showId    Int
-  sort      Int
+  sort      Int?
   name      String   @db.VarChar(24)
+  slug      String   @db.VarChar(30)
   createdAt DateTime @default(now()) @db.Timestamptz
   updatedAt DateTime @updatedAt @db.Timestamptz
   videos    Video[]
@@ -114,10 +124,9 @@ model Video {
   releaseDate    DateTime?  @db.Date
   typeId         Int?
   type           VideoType? @relation(fields: [typeId], references: [id])
-  groupId        Int?
-  group          Group?     @relation(fields: [groupId], references: [id])
+  groups         Group[]
   seasonId       Int?
-  seasons        Season?    @relation(fields: [seasonId], references: [id])
+  season         Season?    @relation(fields: [seasonId], references: [id])
   episode        Int?
   specialEpisode Int?
   sort           Int?
@@ -135,7 +144,6 @@ model Video {
   @@index([hostId])
   @@index([seasonId])
   @@index([typeId])
-  @@index([groupId])
   @@index([sort])
 }
 
